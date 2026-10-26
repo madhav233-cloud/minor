@@ -1,0 +1,739 @@
+import { c as prettyDate, s as pct, t as HORIZON_META } from "./types-9wxUdtPy.mjs";
+import { n as buildBundleShell } from "./assess-Dv4Zk1eQ.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/market.server-BuIudSxX.js
+function sma(values, period) {
+	if (values.length < period || period <= 0) return null;
+	let sum = 0;
+	for (let i = values.length - period; i < values.length; i++) sum += values[i];
+	return sum / period;
+}
+function sampleStd(values) {
+	if (values.length < 2) return null;
+	const mean = values.reduce((a, b) => a + b, 0) / values.length;
+	const v = values.reduce((a, b) => a + (b - mean) ** 2, 0) / (values.length - 1);
+	return Math.sqrt(v);
+}
+function emaSeries(values, period) {
+	const out = Array(values.length).fill(NaN);
+	if (values.length < period) return out;
+	const k = 2 / (period + 1);
+	let prev = 0;
+	for (let i = 0; i < period; i++) prev += values[i];
+	prev /= period;
+	out[period - 1] = prev;
+	for (let i = period; i < values.length; i++) {
+		prev = values[i] * k + prev * (1 - k);
+		out[i] = prev;
+	}
+	return out;
+}
+function rsiWilder(closes, period = 14) {
+	if (closes.length < period + 1) return null;
+	let gain = 0;
+	let loss = 0;
+	for (let i = 1; i <= period; i++) {
+		const d = closes[i] - closes[i - 1];
+		if (d >= 0) gain += d;
+		else loss -= d;
+	}
+	let avgGain = gain / period;
+	let avgLoss = loss / period;
+	for (let i = period + 1; i < closes.length; i++) {
+		const d = closes[i] - closes[i - 1];
+		const g = d > 0 ? d : 0;
+		const l = d < 0 ? -d : 0;
+		avgGain = (avgGain * (period - 1) + g) / period;
+		avgLoss = (avgLoss * (period - 1) + l) / period;
+	}
+	if (avgLoss === 0) return 100;
+	return 100 - 100 / (1 + avgGain / avgLoss);
+}
+function macdLast(closes) {
+	if (closes.length < 40) return null;
+	const e12 = emaSeries(closes, 12);
+	const e26 = emaSeries(closes, 26);
+	const valid = [];
+	for (let i = 0; i < closes.length; i++) if (Number.isFinite(e12[i]) && Number.isFinite(e26[i])) valid.push(e12[i] - e26[i]);
+	if (valid.length < 12) return null;
+	const sig = emaSeries(valid, 9);
+	const s = sig[sig.length - 1];
+	const prevS = sig[sig.length - 2];
+	if (s == null || prevS == null || !Number.isFinite(s) || !Number.isFinite(prevS)) return null;
+	const m = valid[valid.length - 1];
+	const prevM = valid[valid.length - 2];
+	return {
+		macd: m,
+		signal: s,
+		hist: m - s,
+		prevHist: prevM - prevS
+	};
+}
+function atrWilder(bars, period = 14) {
+	if (bars.length < period + 1) return null;
+	const trs = [];
+	for (let i = 1; i < bars.length; i++) {
+		const b = bars[i];
+		const p = bars[i - 1];
+		trs.push(Math.max(b.h - b.l, Math.abs(b.h - p.c), Math.abs(b.l - p.c)));
+	}
+	let avg = 0;
+	for (let i = 0; i < period; i++) avg += trs[i];
+	avg /= period;
+	for (let i = period; i < trs.length; i++) avg = (avg * (period - 1) + trs[i]) / period;
+	return avg;
+}
+function pctChange(closes, days) {
+	if (days <= 0 || closes.length <= days) return null;
+	const a = closes[closes.length - 1 - days];
+	const b = closes[closes.length - 1];
+	if (a == null || b == null || a === 0) return null;
+	return b / a - 1;
+}
+function dailyReturns(closes) {
+	const out = [];
+	for (let i = 1; i < closes.length; i++) {
+		const a = closes[i - 1];
+		const b = closes[i];
+		if (a !== 0) out.push(b / a - 1);
+	}
+	return out;
+}
+function annualizedVol(rets) {
+	const sd = sampleStd(rets);
+	if (sd == null) return null;
+	return sd * Math.sqrt(252);
+}
+function maxDrawdown(closes) {
+	if (closes.length < 5) return null;
+	let peak = closes[0];
+	let mdd = 0;
+	for (const c of closes) {
+		if (c > peak) peak = c;
+		const dd = peak === 0 ? 0 : c / peak - 1;
+		if (dd < mdd) mdd = dd;
+	}
+	return mdd;
+}
+function historicalVar(rets, q = .05) {
+	if (rets.length < 30) return null;
+	const sorted = [...rets].sort((a, b) => a - b);
+	return sorted[Math.max(0, Math.ceil(q * sorted.length) - 1)] ?? null;
+}
+var POS = [
+	"beat",
+	"beats",
+	"surge",
+	"surges",
+	"record",
+	"upgrade",
+	"approval",
+	"approves",
+	"partnership",
+	"buyback",
+	"dividend",
+	"outperform",
+	"rally",
+	"rallies",
+	"growth",
+	"expands",
+	"expansion",
+	"launch",
+	"launches",
+	"strong",
+	"gain",
+	"gains",
+	"rises",
+	"rise",
+	"jumps",
+	"jump",
+	"boost",
+	"wins",
+	"awarded",
+	"profit",
+	"profits"
+];
+var NEG = [
+	"miss",
+	"misses",
+	"probe",
+	"investigation",
+	"lawsuit",
+	"fraud",
+	"downgrade",
+	"loss",
+	"losses",
+	"decline",
+	"declines",
+	"cut",
+	"cuts",
+	"warning",
+	"default",
+	"bankruptcy",
+	"penalty",
+	"recall",
+	"layoff",
+	"layoffs",
+	"slump",
+	"plunge",
+	"plunges",
+	"weak",
+	"falls",
+	"fall",
+	"drops",
+	"drop",
+	"fine",
+	"fines",
+	"scandal",
+	"delay",
+	"delays"
+];
+function hasWord(text, word) {
+	return new RegExp(`\\b${word}\\b`, "i").test(text);
+}
+function scoreTitle(title) {
+	const events = [];
+	const t = title.toLowerCase();
+	if (/regulat|antitrust|\bprobe\b|investigation/.test(t)) events.push("regulatory");
+	if (/lawsuit|litigation|\bsues\b|\bsued\b/.test(t)) events.push("litigation");
+	if (/earnings|\bprofit\b|\brevenue\b|quarter/.test(t)) events.push("earnings");
+	if (/acqui|merger|takeover/.test(t)) events.push("m&a");
+	if (/launch|unveils|introduces/.test(t)) events.push("product");
+	if (/\bceo\b|appoints|resigns/.test(t)) events.push("management");
+	if (/expan|capacity|\binvests\b|\binvestment\b/.test(t)) events.push("expansion");
+	if (/fraud|bankrupt|default/.test(t)) events.push("distress");
+	let s = 0;
+	let hits = 0;
+	for (const w of POS) if (hasWord(t, w)) {
+		s += 1;
+		hits += 1;
+	}
+	for (const w of NEG) if (hasWord(t, w)) {
+		s -= 1;
+		hits += 1;
+	}
+	const severe = events.includes("regulatory") || events.includes("litigation") || events.includes("distress");
+	if (severe) s -= .8;
+	if (hits === 0 && !severe) return {
+		sentiment: 0,
+		events
+	};
+	return {
+		sentiment: Math.max(-1, Math.min(1, s / Math.max(1, hits))),
+		events
+	};
+}
+function recencyWeight(iso, now = Date.now()) {
+	if (!iso) return .5;
+	const t = new Date(iso).getTime();
+	if (Number.isNaN(t)) return .5;
+	const age = (now - t) / 864e5;
+	if (age < 0) return .7;
+	if (age <= 7) return 1;
+	if (age <= 21) return .75;
+	if (age <= 45) return .45;
+	return .25;
+}
+function aggregateSentiment(items, now = Date.now()) {
+	if (items.length === 0) return null;
+	let wSum = 0;
+	let acc = 0;
+	for (const item of items) {
+		const w = recencyWeight(item.publishedAt, now);
+		wSum += w;
+		acc += w * item.sentiment;
+	}
+	if (wSum === 0) return 0;
+	return acc / wSum;
+}
+var UA = "Mozilla/5.0 (compatible; StockSense/2.0; educational research)";
+function cacheBag() {
+	const g = globalThis;
+	if (!g.__ssYahoo) g.__ssYahoo = { session: null };
+	return g.__ssYahoo;
+}
+function asRecord(x) {
+	return x && typeof x === "object" ? x : null;
+}
+function yRaw(x) {
+	if (typeof x === "number" && Number.isFinite(x)) return x;
+	const o = asRecord(x);
+	if (!o) return null;
+	return typeof o.raw === "number" && Number.isFinite(o.raw) ? o.raw : null;
+}
+function yFmt(x) {
+	const o = asRecord(x);
+	return o && typeof o.fmt === "string" ? o.fmt : null;
+}
+function yText(x) {
+	return typeof x === "string" && x.trim() ? x.trim() : null;
+}
+function isoFromUnix(sec) {
+	if (sec == null) return null;
+	const d = /* @__PURE__ */ new Date(sec * 1e3);
+	if (Number.isNaN(d.getTime())) return null;
+	return d.toISOString();
+}
+function cookieHeader(res, previous = "") {
+	const parts = previous ? previous.split(";").map((p) => p.trim()).filter(Boolean) : [];
+	const fresh = typeof res.headers.getSetCookie === "function" ? res.headers.getSetCookie() : [];
+	for (const c of fresh) {
+		const pair = c.split(";")[0]?.trim();
+		if (pair) parts.push(pair);
+	}
+	return parts.join("; ");
+}
+async function getSession() {
+	const bag = cacheBag();
+	if (bag.session && bag.session.exp > Date.now()) return bag.session;
+	let cookie = cookieHeader(await fetch("https://fc.yahoo.com", {
+		headers: { "User-Agent": UA },
+		redirect: "manual",
+		signal: AbortSignal.timeout(12e3)
+	}));
+	const crumbRes = await fetch("https://query1.finance.yahoo.com/v1/test/getcrumb", {
+		headers: {
+			"User-Agent": UA,
+			Cookie: cookie
+		},
+		signal: AbortSignal.timeout(12e3)
+	});
+	cookie = cookieHeader(crumbRes, cookie);
+	const crumb = (await crumbRes.text()).trim();
+	if (!crumb || crumb.includes("<") || crumb.includes(" ")) throw new Error("The market-data session could not be opened. Try again in a moment.");
+	bag.session = {
+		cookie,
+		crumb,
+		exp: Date.now() + 12e5
+	};
+	return bag.session;
+}
+async function searchEquity(query) {
+	const url = `https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=8&newsCount=0`;
+	const res = await fetch(url, {
+		headers: { "User-Agent": UA },
+		signal: AbortSignal.timeout(12e3)
+	});
+	if (!res.ok) return null;
+	const body = await res.json();
+	const equities = (Array.isArray(body.quotes) ? body.quotes : []).map((q) => asRecord(q)).filter((q) => !!q && q.quoteType === "EQUITY" && typeof q.symbol === "string");
+	if (equities.length === 0) return null;
+	const hit = equities.find((q) => String(q.symbol).toLowerCase() === query.toLowerCase()) ?? equities[0];
+	return {
+		symbol: String(hit.symbol),
+		name: yText(hit.longname) ?? yText(hit.shortname) ?? String(hit.symbol),
+		exchange: yText(hit.exchDisp) ?? yText(hit.exchange) ?? "",
+		sector: yText(hit.sectorDisp) ?? yText(hit.sector),
+		industry: yText(hit.industryDisp) ?? yText(hit.industry)
+	};
+}
+async function fetchChart(symbol) {
+	const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=2y&includePrePost=false`;
+	const res = await fetch(url, {
+		headers: { "User-Agent": UA },
+		signal: AbortSignal.timeout(12e3)
+	});
+	if (!res.ok) return null;
+	const chart = asRecord(asRecord(await res.json())?.chart);
+	const result = Array.isArray(chart?.result) ? asRecord(chart.result[0]) : null;
+	if (!result) return null;
+	const meta = asRecord(result.meta) ?? {};
+	const timestamps = Array.isArray(result.timestamp) ? result.timestamp : [];
+	const indicators = asRecord(result.indicators);
+	const quote = Array.isArray(indicators?.quote) ? asRecord(indicators.quote[0]) : null;
+	if (!quote) return null;
+	const opens = Array.isArray(quote.open) ? quote.open : [];
+	const highs = Array.isArray(quote.high) ? quote.high : [];
+	const lows = Array.isArray(quote.low) ? quote.low : [];
+	const closes = Array.isArray(quote.close) ? quote.close : [];
+	const vols = Array.isArray(quote.volume) ? quote.volume : [];
+	const bars = [];
+	for (let i = 0; i < timestamps.length; i++) {
+		const t = timestamps[i];
+		const c = closes[i];
+		if (typeof t !== "number" || typeof c !== "number" || !Number.isFinite(c)) continue;
+		const o = typeof opens[i] === "number" ? opens[i] : c;
+		const h = typeof highs[i] === "number" ? highs[i] : c;
+		const l = typeof lows[i] === "number" ? lows[i] : c;
+		const v = typeof vols[i] === "number" ? vols[i] : 0;
+		bars.push({
+			t,
+			o,
+			h,
+			l,
+			c,
+			v
+		});
+	}
+	if (bars.length < 2) return null;
+	return {
+		bars,
+		meta
+	};
+}
+async function fetchSummary(symbol) {
+	for (let attempt = 0; attempt < 2; attempt++) {
+		const session = await getSession();
+		const url = new URL(`https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(symbol)}`);
+		url.searchParams.set("modules", "financialData,defaultKeyStatistics,incomeStatementHistory,balanceSheetHistory,summaryDetail,price");
+		url.searchParams.set("crumb", session.crumb);
+		const res = await fetch(url, {
+			headers: {
+				"User-Agent": UA,
+				Cookie: session.cookie
+			},
+			signal: AbortSignal.timeout(12e3)
+		});
+		if (res.status === 401 || res.status === 403) {
+			cacheBag().session = null;
+			continue;
+		}
+		if (!res.ok) return null;
+		const qs = asRecord(asRecord(await res.json())?.quoteSummary);
+		const result = Array.isArray(qs?.result) ? asRecord(qs.result[0]) : null;
+		if (!result && asRecord(qs?.error)) {
+			cacheBag().session = null;
+			continue;
+		}
+		return result;
+	}
+	return null;
+}
+function decodeXml(s) {
+	return s.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1").replace(/<[^>]+>/g, "").replace(/&#x([\da-f]+);/gi, (entity, digits) => {
+		const codePoint = Number.parseInt(digits, 16);
+		return codePoint <= 1114111 && (codePoint < 55296 || codePoint > 57343) ? String.fromCodePoint(codePoint) : entity;
+	}).replace(/&#(\d+);/g, (entity, digits) => {
+		const codePoint = Number.parseInt(digits, 10);
+		return codePoint <= 1114111 && (codePoint < 55296 || codePoint > 57343) ? String.fromCodePoint(codePoint) : entity;
+	}).replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, "\"").replace(/&apos;/g, "'").replace(/&amp;/g, "&").trim();
+}
+async function fetchHeadlines(name, currency) {
+	const india = currency === "INR";
+	const q = `${name} when:40d`;
+	const url = india ? `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=en-IN&gl=IN&ceid=IN:en` : `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=en-US&gl=US&ceid=US:en`;
+	const res = await fetch(url, {
+		headers: { "User-Agent": UA },
+		signal: AbortSignal.timeout(12e3)
+	});
+	if (!res.ok) return [];
+	const blocks = [...(await res.text()).matchAll(/<item>([\s\S]*?)<\/item>/g)];
+	const seen = /* @__PURE__ */ new Set();
+	const out = [];
+	for (const block of blocks) {
+		const item = block[1] ?? "";
+		const titleRaw = decodeXml(item.match(/<title>([\s\S]*?)<\/title>/)?.[1] ?? "");
+		const link = decodeXml(item.match(/<link>([\s\S]*?)<\/link>/)?.[1] ?? "");
+		const pub = item.match(/<pubDate>([\s\S]*?)<\/pubDate>/)?.[1]?.trim() ?? "";
+		if (!titleRaw) continue;
+		let title = titleRaw;
+		let publisher = "Google News";
+		const sep = titleRaw.lastIndexOf(" - ");
+		if (sep > 20) {
+			title = titleRaw.slice(0, sep).trim();
+			publisher = titleRaw.slice(sep + 3).trim() || publisher;
+		}
+		const key = title.toLowerCase();
+		if (seen.has(key)) continue;
+		seen.add(key);
+		const scored = scoreTitle(title);
+		const parsedDate = pub ? new Date(pub) : null;
+		const publishedAt = parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate.toISOString() : null;
+		out.push({
+			title,
+			publisher,
+			url: link.startsWith("http") ? link : null,
+			publishedAt,
+			sentiment: scored.sentiment,
+			events: scored.events
+		});
+		if (out.length >= 8) break;
+	}
+	return out;
+}
+function growthPair(latest, prior, vendor, label) {
+	let computed = null;
+	if (latest != null && prior != null && Math.abs(prior) > 0) computed = (latest - prior) / Math.abs(prior);
+	if (computed != null && vendor != null && Math.abs(computed - vendor) > .15) return {
+		value: null,
+		detail: `${label} was not scored. The change computed from annual statements is ${pct(computed)}, while the vendor growth field is ${pct(vendor)}. They disagree by more than 15 percentage points, so neither figure was allowed to drive the stance.`
+	};
+	if (computed != null) {
+		const agree = vendor == null ? "The vendor growth field was missing, so the statement change was used." : `The vendor growth field is ${pct(vendor)}, close enough to use the statement change.`;
+		return {
+			value: computed,
+			detail: `${label} is the change between the two latest annual figures. ${agree}`
+		};
+	}
+	if (vendor != null) return {
+		value: vendor,
+		detail: `${label} uses the vendor growth field because a clean two-year statement change was not available.`
+	};
+	return {
+		value: null,
+		detail: null
+	};
+}
+function ratioFromVendor(field, label, warnings) {
+	const raw = yRaw(field);
+	if (raw == null) return null;
+	const fmt = yFmt(field);
+	if (fmt && fmt.includes("%")) {
+		warnings.push(`${label} was supplied as ${fmt} and converted to a ratio of ${(raw / 100).toFixed(2)}.`);
+		return raw / 100;
+	}
+	if (Math.abs(raw) > 5) {
+		warnings.push(`${label} raw value was ${raw.toFixed(2)} without a percent label. Values above 5 are treated as a percent and converted to a ratio. That assumption is marked because the unit was ambiguous.`);
+		return raw / 100;
+	}
+	return raw;
+}
+function emptyPack(base) {
+	return {
+		sector: null,
+		industry: null,
+		instrument: null,
+		last: null,
+		prev: null,
+		dayChange: null,
+		sma20: null,
+		sma50: null,
+		rsi: null,
+		macd: null,
+		macdSignal: null,
+		macdHist: null,
+		macdCross: "none",
+		atr: null,
+		volumeChange: null,
+		return21: null,
+		return63: null,
+		return252: null,
+		bars: 0,
+		priceAsOf: null,
+		vol252: null,
+		volSample: 0,
+		mddHorizon: null,
+		mddFull: null,
+		var95: null,
+		varSample: 0,
+		beta: null,
+		drift: null,
+		driftLow: null,
+		driftHigh: null,
+		driftSample: 0,
+		newsScore: null,
+		newsCount: 0,
+		severeNegative: false,
+		headlines: [],
+		revenueGrowth: null,
+		earningsGrowth: null,
+		revenueGrowthDetail: null,
+		earningsGrowthDetail: null,
+		operatingMargin: null,
+		profitMargin: null,
+		grossMargin: null,
+		roe: null,
+		debtToEquity: null,
+		trailingPE: null,
+		priceToBook: null,
+		evToEbitda: null,
+		revenue: null,
+		priorRevenue: null,
+		netIncome: null,
+		priorNetIncome: null,
+		totalDebt: null,
+		totalCash: null,
+		statementAsOf: null,
+		priorStatementAsOf: null,
+		statementCount: 0,
+		isFinancial: false,
+		fundamentalsAvailable: false,
+		warnings: [],
+		...base
+	};
+}
+function statementRows(list) {
+	if (!Array.isArray(list)) return [];
+	return list.map((row) => asRecord(row)).filter((row) => !!row).sort((a, b) => (yRaw(b.endDate) ?? 0) - (yRaw(a.endDate) ?? 0));
+}
+async function buildBundle(query, horizon) {
+	const looksSymbol = /^[A-Za-z0-9.^=-]{1,16}$/.test(query);
+	let resolved = null;
+	if (!looksSymbol) {
+		resolved = await searchEquity(query);
+		if (!resolved) throw new Error(`No listed equity matched “${query}”. Try a ticker such as RELIANCE.NS or AAPL.`);
+	} else resolved = await searchEquity(query) ?? {
+		symbol: query.toUpperCase(),
+		name: query.toUpperCase(),
+		exchange: "",
+		sector: null,
+		industry: null
+	};
+	const chart = await fetchChart(resolved.symbol);
+	if (!chart) throw new Error(`Prices for ${resolved.symbol} were not available. Check the ticker and try again.`);
+	const meta = chart.meta;
+	const name = yText(meta.longName) ?? yText(meta.shortName) ?? resolved.name;
+	const currency = yText(meta.currency) ?? "USD";
+	const exchange = yText(meta.fullExchangeName) ?? yText(meta.exchangeName) ?? resolved.exchange;
+	const instrument = yText(meta.instrumentType);
+	const symbol = yText(meta.symbol) ?? resolved.symbol;
+	const [summary, headlines] = await Promise.all([fetchSummary(symbol).catch(() => null), fetchHeadlines(name, currency).catch(() => [])]);
+	const closes = chart.bars.map((b) => b.c);
+	const last = closes[closes.length - 1] ?? null;
+	const prev = closes[closes.length - 2] ?? null;
+	const macd = macdLast(closes);
+	const vols = chart.bars.map((b) => b.v);
+	const volAvg = sma(vols.slice(0, -1), 20);
+	const lastVol = vols[vols.length - 1] ?? 0;
+	const rets = dailyReturns(closes);
+	const retsYear = rets.slice(-252);
+	const volSample = retsYear.length >= 30 ? retsYear : rets;
+	const days = HORIZON_META[horizon].days;
+	const windowCloses = closes.slice(-(days + 1));
+	const sd = sampleStd(volSample);
+	const driftSample = volSample.length;
+	let drift = null;
+	let driftLow = null;
+	let driftHigh = null;
+	if (sd != null && driftSample >= 60 && last != null) {
+		drift = volSample.reduce((a, b) => a + b, 0) / volSample.length * days;
+		const band = sd * Math.sqrt(days);
+		driftLow = drift - band;
+		driftHigh = drift + band;
+	}
+	const warnings = [];
+	const priceAsOf = isoFromUnix(chart.bars[chart.bars.length - 1]?.t ?? null);
+	if (priceAsOf) {
+		const age = (Date.now() - new Date(priceAsOf).getTime()) / 864e5;
+		if (age > 7) warnings.push(`The newest price bar is ${Math.floor(age)} days old.`);
+	}
+	const financial = asRecord(summary?.financialData);
+	const stats = asRecord(summary?.defaultKeyStatistics);
+	const detail = asRecord(summary?.summaryDetail);
+	const income = statementRows(asRecord(summary?.incomeStatementHistory)?.incomeStatementHistory);
+	const latest = income[0] ?? null;
+	const prior = income[1] ?? null;
+	const revenue = latest ? yRaw(latest.totalRevenue) : null;
+	const priorRevenue = prior ? yRaw(prior.totalRevenue) : null;
+	const netIncome = latest ? yRaw(latest.netIncome) : null;
+	const priorNetIncome = prior ? yRaw(prior.netIncome) : null;
+	const statementAsOf = latest ? isoFromUnix(yRaw(latest.endDate)) : null;
+	const priorStatementAsOf = prior ? isoFromUnix(yRaw(prior.endDate)) : null;
+	if (statementAsOf) {
+		if ((Date.now() - new Date(statementAsOf).getTime()) / 864e5 > 540) warnings.push(`The latest annual statement ends ${prettyDate(statementAsOf)}, which is more than 18 months ago.`);
+	}
+	const revenueGrowth = growthPair(revenue, priorRevenue, yRaw(financial?.revenueGrowth), "Revenue growth");
+	const earningsGrowth = growthPair(netIncome, priorNetIncome, yRaw(financial?.earningsGrowth), "Earnings growth");
+	if (revenueGrowth.detail && revenueGrowth.value == null) warnings.push(revenueGrowth.detail);
+	if (earningsGrowth.detail && earningsGrowth.value == null) warnings.push(earningsGrowth.detail);
+	const sector = resolved.sector;
+	const industry = resolved.industry;
+	const isFinancial = /bank|insurance|financial/i.test(`${sector ?? ""} ${industry ?? ""}`);
+	const deWarnings = [];
+	const debtToEquity = ratioFromVendor(financial?.debtToEquity, "Debt-to-equity", deWarnings);
+	warnings.push(...deWarnings);
+	let priceToBook = yRaw(detail?.priceToBook);
+	const book = yRaw(stats?.bookValue);
+	if (priceToBook == null && book != null && book > 0 && last != null) priceToBook = last / book;
+	const roeRaw = yRaw(financial?.returnOnEquity);
+	const roe = roeRaw == null ? null : Math.abs(roeRaw) > 2 ? roeRaw / 100 : roeRaw;
+	const equityInstrument = !instrument || instrument === "EQUITY";
+	if (!summary) warnings.push("Financial statements were not returned. Fundamental metrics were left blank.");
+	if (income.length > 0 && !latest?.totalStockholderEquity) {}
+	const bs = statementRows(asRecord(summary?.balanceSheetHistory)?.balanceSheetStatements);
+	if (summary && bs.length > 0 && Object.keys(bs[0] ?? {}).length <= 2) warnings.push("The balance-sheet payload did not include line items, so equity-based ratios were not computed from it.");
+	const operatingMargin = yRaw(financial?.operatingMargins);
+	const profitMargin = yRaw(financial?.profitMargins);
+	const trailingPE = yRaw(detail?.trailingPE) ?? yRaw(detail?.trailingPe);
+	const fundamentalsAvailable = equityInstrument && [
+		revenueGrowth.value,
+		earningsGrowth.value,
+		operatingMargin,
+		profitMargin,
+		trailingPE,
+		debtToEquity,
+		roe
+	].filter((v) => v != null).length >= 1;
+	if (!equityInstrument) warnings.push(`Instrument type is ${instrument}. Operating-company ratios were not scored.`);
+	const newsScore = headlines.length ? aggregateSentiment(headlines) : null;
+	const severeNegative = headlines.some((h) => (h.events.includes("regulatory") || h.events.includes("litigation") || h.events.includes("distress")) && h.sentiment < 0);
+	if (headlines.length > 0) {
+		const newest = headlines.map((h) => h.publishedAt ? new Date(h.publishedAt).getTime() : 0).reduce((a, b) => Math.max(a, b), 0);
+		if (newest) {
+			const age = (Date.now() - newest) / 864e5;
+			if (age > 30) warnings.push(`The newest headline is ${Math.floor(age)} days old.`);
+		}
+		if (headlines.filter((h) => recencyWeight(h.publishedAt) < .5).length === headlines.length) warnings.push("Every headline is older than three weeks, so news weight in the score is reduced by the lexicon's recency weights.");
+	} else warnings.push("No headlines were returned for this name.");
+	const pack = emptyPack({
+		name,
+		symbol,
+		exchange,
+		currency,
+		sector,
+		industry,
+		instrument,
+		last,
+		prev,
+		dayChange: last != null && prev ? last / prev - 1 : null,
+		sma20: sma(closes, 20),
+		sma50: sma(closes, 50),
+		rsi: rsiWilder(closes),
+		macd: macd?.macd ?? null,
+		macdSignal: macd?.signal ?? null,
+		macdHist: macd?.hist ?? null,
+		macdCross: macd == null ? "none" : macd.prevHist <= 0 && macd.hist > 0 ? "bullish" : macd.prevHist >= 0 && macd.hist < 0 ? "bearish" : "none",
+		atr: atrWilder(chart.bars),
+		volumeChange: volAvg && lastVol ? lastVol / volAvg - 1 : null,
+		return21: pctChange(closes, 21),
+		return63: pctChange(closes, 63),
+		return252: pctChange(closes, 252),
+		bars: chart.bars.length,
+		priceAsOf,
+		vol252: annualizedVol(volSample),
+		volSample: volSample.length,
+		mddHorizon: maxDrawdown(windowCloses),
+		mddFull: maxDrawdown(closes),
+		var95: historicalVar(volSample),
+		varSample: volSample.length,
+		beta: yRaw(detail?.beta),
+		drift,
+		driftLow,
+		driftHigh,
+		driftSample,
+		newsScore,
+		newsCount: headlines.length,
+		severeNegative,
+		headlines,
+		revenueGrowth: equityInstrument ? revenueGrowth.value : null,
+		earningsGrowth: equityInstrument ? earningsGrowth.value : null,
+		revenueGrowthDetail: equityInstrument ? revenueGrowth.detail : "Revenue growth was not scored for this instrument.",
+		earningsGrowthDetail: equityInstrument ? earningsGrowth.detail : null,
+		operatingMargin: equityInstrument ? operatingMargin : null,
+		profitMargin: equityInstrument ? profitMargin : null,
+		grossMargin: equityInstrument ? yRaw(financial?.grossMargins) : null,
+		roe: equityInstrument ? roe : null,
+		debtToEquity: equityInstrument ? debtToEquity : null,
+		trailingPE: equityInstrument ? trailingPE : null,
+		priceToBook: equityInstrument ? priceToBook : null,
+		evToEbitda: equityInstrument ? yRaw(stats?.enterpriseToEbitda) : null,
+		revenue,
+		priorRevenue,
+		netIncome,
+		priorNetIncome,
+		totalDebt: yRaw(financial?.totalDebt),
+		totalCash: yRaw(financial?.totalCash),
+		statementAsOf,
+		priorStatementAsOf,
+		statementCount: income.length,
+		isFinancial,
+		fundamentalsAvailable: equityInstrument ? fundamentalsAvailable : false,
+		warnings
+	});
+	const series = chart.bars.slice(-252).map((b) => ({
+		d: (/* @__PURE__ */ new Date(b.t * 1e3)).toISOString().slice(0, 10),
+		c: Number(b.c.toFixed(4))
+	}));
+	return buildBundleShell(pack, horizon, series, (/* @__PURE__ */ new Date()).toISOString());
+}
+//#endregion
+export { buildBundle };

@@ -1,0 +1,36 @@
+{
+  "url": "http://127.0.0.1:8080/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "StockSense",
+      "hasCanvas": false,
+      "bodyTextLen": 1010,
+      "bodyTextHash": "decd533506d399beb995edf583d6079288a20bbc47bd7efc2afa6d7e826ffae1",
+      "bodyTextPrefix": "StockSense Investment committee Educational. Not a solicitation ",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "StockSense",
+      "hasCanvas": false,
+      "bodyTextLen": 1010,
+      "bodyTextHash": "decd533506d399beb995edf583d6079288a20bbc47bd7efc2afa6d7e826ffae1",
+      "bodyTextPrefix": "StockSense Investment committee Educational. Not a solicitation ",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-preview.json"
+}
